@@ -40,8 +40,8 @@ public class Missatge {
     public static String[] getPartsMissatge(String missatgeRaw) {
         String msg = missatgeRaw.trim();
         if (msg.isEmpty() || msg.indexOf("#") == -1) {
-        System.out.println("WARN: missatge buit o incorrecte");
-        return null;
+            System.out.println("WARN: missatge buit o incorrecte");
+            return null;
         }
         return msg.split("#");
     }

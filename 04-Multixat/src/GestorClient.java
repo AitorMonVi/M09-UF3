@@ -30,28 +30,43 @@ public class GestorClient extends Thread {
 
     public String getNom() { return name; }
 
+    @Override
     public void run() {
-        while (!sortir) {
-            try {
+        try {
+            while (!sortir) {
                 String message = (String) input.readObject();
                 processaMissatge(message);
-            } catch (IOException | ClassNotFoundException e) {
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                server.eliminarClient(name);
+                if (client!=null && !client.isClosed()) client.close();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+    }
 
+    public void enviarMissatge(String recipient, String message) {
         try {
-            if (client!=null && !client.isClosed()) client.close();
+            if (recipient.equals("Grup")) {
+                output.writeObject(Missatge.getMissatgeGrup(message));
+                output.flush();
+            } else {
+                output.writeObject(Missatge.getMissatgePersonal(recipient, message));
+                output.flush();
+            }
+            
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void enviarMissatge(String recipient, String message) {}
-
     public void processaMissatge(String rawMessage) {
         String code = Missatge.getCodiMissatge(rawMessage);
-        String[] codeParts = Missatge.getPartsMissatge(code);
+        String[] codeParts = Missatge.getPartsMissatge(rawMessage);
         switch (code) {
             case Missatge.CODI_CONECTAR : {
                 this.name = codeParts[1];
@@ -61,14 +76,16 @@ public class GestorClient extends Thread {
             case Missatge.CODI_MSG_PERSONAL : {
                 String recipient = codeParts[1];
                 String message = codeParts[2];
-
-                enviarMissatge(recipient, message);
+                server.enviarMissatgePersonal(recipient, name, message);
                 break;
             }
             case Missatge.CODI_MSG_GRUP : {
+                String message = codeParts[1];
+                server.enviarMissatgeGrup(message);
                 break;
             }
             case Missatge.CODI_SORTIR_CLIENT : {
+                this.sortir = true;
                 server.eliminarClient(getNom());
                 break;
             }
@@ -77,7 +94,9 @@ public class GestorClient extends Thread {
                 server.finalitzarXat();
                 break;
             }
-            default : {}
+            default : {
+                System.err.println("Codi desconegut: " + code);
+            }
         }
     }
 }
