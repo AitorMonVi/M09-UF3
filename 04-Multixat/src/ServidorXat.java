@@ -1,6 +1,7 @@
 /* */
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Hashtable;
@@ -20,29 +21,59 @@ public class ServidorXat {
         this.sortir = false;
     }
 
+    public ServerSocket getServer() { return this.server; }
+
     public void servidorAEscoltar() {
         try {
             server = new ServerSocket(PORT);
-
-            while (!sortir) {
-                Socket client = server.accept();
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void pararServidor() {}
+    public void pararServidor() {
+        try {
+            if (server!=null && !server.isClosed()) server.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-    public void finalitzarXat() {}
+    public void finalitzarXat() {
+        enviarMissatgeGrup(MSG_SORTIR);
+        table.clear();
 
-    public void afegirClient(GestorClient client) {}
+        this.sortir = true;
+    }
 
-    public void eliminarClient(String name) {}
+    public void afegirClient(GestorClient gestor) {
+        table.put(gestor.getNom(), gestor);
+        enviarMissatgeGrup("Entra: " + gestor.getNom());
+    }
+
+    public void eliminarClient(String name) {
+        if (table.contains(name)) table.remove(name);
+    }
 
     public void enviarMissatgeGrup(String message) {}
 
     public void enviarMissatgePersonal(String recipient, String sender, String message) {}
 
-    public static void main(String[] args) {}
+    public static void main(String[] args) {
+        ServidorXat server = new ServidorXat();
+        server.servidorAEscoltar();
+
+        while (!server.sortir) {
+            try {
+                Socket client = server.getServer().accept();
+    
+                GestorClient gestor = new GestorClient(client, server);
+                gestor.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        server.pararServidor();
+    }
 }

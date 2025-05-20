@@ -14,8 +14,7 @@ public class GestorClient extends Thread {
     private ServidorXat server;
     private boolean sortir;
 
-    public GestorClient(String name, Socket socket, ServidorXat server) {
-        this.name = name;
+    public GestorClient(Socket socket, ServidorXat server) {
         this.client = socket;
         this.server = server;
         
@@ -31,9 +30,54 @@ public class GestorClient extends Thread {
 
     public String getNom() { return name; }
 
-    public void run() {}
+    public void run() {
+        while (!sortir) {
+            try {
+                String message = (String) input.readObject();
+                processaMissatge(message);
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            if (client!=null && !client.isClosed()) client.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public void enviarMissatge(String recipient, String message) {}
 
-    public void processaMissatge(String message) {}
+    public void processaMissatge(String rawMessage) {
+        String code = Missatge.getCodiMissatge(rawMessage);
+        String[] codeParts = Missatge.getPartsMissatge(code);
+        switch (code) {
+            case Missatge.CODI_CONECTAR : {
+                this.name = codeParts[1];
+                server.afegirClient(this);
+                break;
+            }
+            case Missatge.CODI_MSG_PERSONAL : {
+                String recipient = codeParts[1];
+                String message = codeParts[2];
+
+                enviarMissatge(recipient, message);
+                break;
+            }
+            case Missatge.CODI_MSG_GRUP : {
+                break;
+            }
+            case Missatge.CODI_SORTIR_CLIENT : {
+                server.eliminarClient(getNom());
+                break;
+            }
+            case Missatge.CODI_SORTIR_TOTS : {
+                this.sortir = true;
+                server.finalitzarXat();
+                break;
+            }
+            default : {}
+        }
+    }
 }
